@@ -1,0 +1,131 @@
+# Environment Variables
+.env
+.env.local
+.env.*.local
+*.env
+
+# Virtual Environments
+venv/
+env/
+ENV/
+.venv/
+.ENV/
+virtualenv/
+.virtualenv/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+
+# Data Files (Sensitive Financial Data)
+# Uncomment specific patterns if you want to ignore actual data files
+data/*.parquet
+data/*.csv
+data/*.json
+data/*.xlsx
+data/*.xls
+data/raw/
+data/processed/
+data/staging/
+*.parquet
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+logs/
+*.log.*
+
+# OS Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+.settings/
+*.sublime-project
+*.sublime-workspace
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+database/
+
+# Temporary Files
+*.tmp
+*.temp
+tmp/
+temp/
+
+# Credentials & Keys
+*.pem
+*.key
+*.cert
+credentials.json
+secrets.json
+config/secrets/
+
+# Documentation Build
+docs/_build/
+site/
+
+# PyCharm
+.idea/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
