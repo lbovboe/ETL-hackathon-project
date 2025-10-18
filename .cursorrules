@@ -1,0 +1,106 @@
+# ETL Hackathon Project - Financial Data Pipeline
+
+## Project Overview
+This project builds an intelligent ETL (Extract, Transform, Load) pipeline for financial data analysis. The system transforms scattered, multi-year financial records from various sources (card payments, bank transfers, e-commerce transactions) into structured, analyzable datasets.
+
+## Project Goals
+- Automate collection, cleaning, and transformation of financial data
+- Enable analysis of spending trends and customer behavior
+- Support evaluation of financial strategies and marketing policies
+- Provide actionable insights for banks, fintech companies, and digital commerce platforms (Shopee, Grab, PayNow, etc.)
+- Bridge the gap between raw financial data and actionable intelligence
+
+## Target Use Cases
+- Banks and financial institutions
+- Fintech companies
+- E-commerce platforms
+- Digital payment services
+- Customer engagement and personalization
+- Financial planning and forecasting
+
+## Technical Architecture
+The project follows a standard ETL pipeline architecture:
+1. **Extract**: Collect financial data from multiple sources
+2. **Transform**: Clean, normalize, and enrich data
+3. **Load**: Store processed data in structured formats for analysis
+
+## Code Standards & Best Practices
+
+### Data Engineering
+- Write robust data validation and error handling
+- Implement data quality checks at each pipeline stage
+- Use appropriate data types for financial values (avoid floating point precision issues)
+- Handle missing data gracefully
+- Maintain data lineage and audit trails
+- Consider data privacy and security (PII handling, encryption)
+
+### Python Development
+- Follow PEP 8 style guidelines
+- Use type hints for function parameters and returns
+- Write modular, reusable code
+- Implement comprehensive logging
+- Add docstrings to all functions and classes
+- Use pandas for data manipulation
+- Consider performance optimization for large datasets
+
+### SQL Development
+- Write clear, well-formatted queries
+- Use appropriate indexes for performance
+- Implement proper data normalization
+- Add comments for complex queries
+- Use transactions for data integrity
+
+### Testing & Quality
+- Write unit tests for transformation logic
+- Validate data quality at each stage
+- Test edge cases (null values, duplicates, invalid formats)
+- Monitor pipeline performance and failures
+
+### Documentation
+- Document data schemas and field definitions
+- Maintain README with setup instructions
+- Document pipeline workflows and dependencies
+- Include sample data formats and examples
+
+## Project Structure
+- `/data/` - Raw and processed data files
+- `/notebooks/` - Jupyter notebooks for exploration and prototyping
+- `/scripts/` - Python scripts for ETL pipeline components
+- `/sql/` - SQL queries and database schemas
+
+## Data Handling Considerations
+- Financial data requires high accuracy (use Decimal for currency)
+- Timestamps should be timezone-aware
+- Handle multiple currencies appropriately
+- Maintain transaction integrity
+- Consider data retention policies
+- Implement proper access controls
+
+## Key Technologies
+- Python for data processing
+- Pandas for data manipulation
+- SQL for data storage and querying
+- Jupyter notebooks for analysis and visualization
+
+## Security & Privacy
+- Never commit actual financial data or PII
+- Use environment variables for sensitive configuration
+- Implement data anonymization for non-production environments
+- Follow compliance requirements (GDPR, PCI-DSS, etc.)
+
+## Performance Considerations
+- Optimize for large datasets (millions of transactions)
+- Use chunking for memory-efficient processing
+- Implement incremental data loading
+- Consider parallel processing for transformations
+- Monitor resource usage and bottlenecks
+
+## When Assisting with This Project
+- Prioritize data accuracy and integrity
+- Suggest scalable solutions
+- Consider real-world financial data challenges
+- Recommend appropriate error handling
+- Focus on maintainability and extensibility
+- Propose data validation strategies
+- Consider edge cases in financial transactions
+
