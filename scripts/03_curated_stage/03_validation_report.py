@@ -8,6 +8,9 @@ Checks:
 3. Data consistency (match STG counts)
 4. Version growth tracking
 5. Date range validation
+6. Data quality score analysis
+7. Storage size report
+8. Duplicate stg_spending_ids check
 """
 
 from sqlalchemy import create_engine, text
@@ -406,6 +409,286 @@ except Exception as e:
     print(f"❌ ERROR: {e}")
     validation_passed = False
     issues_found.append(f"Date validation check failed: {e}")
+
+# ============================================================================
+# CHECK 6: DATA QUALITY SCORE ANALYSIS
+# ============================================================================
+
+print("\n" + "-" * 80)
+print("CHECK 6: Data Quality Score Analysis")
+print("-" * 80)
+
+try:
+    with engine.connect() as conn:
+        # Get quality score statistics
+        result = conn.execute(text("""
+            SELECT 
+                COUNT(*) as total_records,
+                ROUND(AVG(data_quality_score), 2) as avg_score,
+                MIN(data_quality_score) as min_score,
+                MAX(data_quality_score) as max_score,
+                ROUND(STDDEV(data_quality_score), 2) as std_dev
+            FROM curated_spending_snapshots
+            WHERE is_latest = 1
+        """))
+        
+        stats = result.fetchone()
+        
+        if stats[0] == 0:
+            print("⚠️  No records to analyze")
+        else:
+            print(f"Total Records: {stats[0]:,}")
+            print(f"Average Quality Score: {stats[1]}/100")
+            print(f"Score Range: {stats[2]} - {stats[3]}")
+            print(f"Standard Deviation: {stats[4]}")
+            
+            # Quality score distribution
+            print("\n📊 Quality Score Distribution:")
+            result = conn.execute(text("""
+                SELECT 
+                    CASE 
+                        WHEN data_quality_score >= 90 THEN 'A+ (90-100)'
+                        WHEN data_quality_score >= 80 THEN 'A  (80-89)'
+                        WHEN data_quality_score >= 70 THEN 'B  (70-79)'
+                        WHEN data_quality_score >= 60 THEN 'C  (60-69)'
+                        WHEN data_quality_score >= 50 THEN 'D  (50-59)'
+                        ELSE 'F  (<50)'
+                    END as quality_grade,
+                    COUNT(*) as record_count,
+                    ROUND(COUNT(*)::NUMERIC / SUM(COUNT(*)) OVER () * 100, 2) as percentage
+                FROM curated_spending_snapshots
+                WHERE is_latest = 1
+                GROUP BY quality_grade
+                ORDER BY MIN(data_quality_score) DESC
+            """))
+            
+            print(f"{'Grade':<15} {'Count':<12} {'Percentage':<10}")
+            print("-" * 80)
+            
+            total_checked = 0
+            for row in result:
+                grade = row[0]
+                count = row[1]
+                pct = row[2]
+                print(f"{grade:<15} {count:<12,} {pct:>6.2f}%")
+                total_checked += count
+            
+            # Check for low quality records
+            result = conn.execute(text("""
+                SELECT COUNT(*) 
+                FROM curated_spending_snapshots
+                WHERE is_latest = 1 AND data_quality_score < 70
+            """))
+            
+            low_quality_count = result.fetchone()[0]
+            if low_quality_count > 0:
+                pct = (low_quality_count / stats[0]) * 100
+                print(f"\n⚠️  WARNING: {low_quality_count:,} records ({pct:.2f}%) have quality score < 70")
+                issues_found.append(f"{low_quality_count} records with low quality scores")
+            
+            # Quality score by version comparison
+            print("\n📈 Quality Score by Version:")
+            result = conn.execute(text("""
+                SELECT 
+                    snapshot_version,
+                    COUNT(*) as records,
+                    ROUND(AVG(data_quality_score), 2) as avg_score,
+                    MIN(data_quality_score) as min_score,
+                    MAX(data_quality_score) as max_score
+                FROM curated_spending_snapshots
+                GROUP BY snapshot_version
+                ORDER BY snapshot_version DESC
+                LIMIT 5
+            """))
+            
+            print(f"{'Version':<10} {'Records':<12} {'Avg Score':<12} {'Min':<8} {'Max':<8}")
+            print("-" * 80)
+            
+            for row in result:
+                ver = f"V{row[0]}"
+                records = f"{row[1]:,}"
+                avg = f"{row[2]}/100"
+                min_s = row[3]
+                max_s = row[4]
+                print(f"{ver:<10} {records:<12} {avg:<12} {min_s:<8} {max_s:<8}")
+            
+            if stats[1] >= 80:
+                print(f"\n✅ PASS: Average quality score is good ({stats[1]}/100)")
+            elif stats[1] >= 70:
+                print(f"\n⚠️  WARNING: Average quality score is acceptable ({stats[1]}/100)")
+            else:
+                print(f"\n❌ FAIL: Average quality score is low ({stats[1]}/100)")
+                validation_passed = False
+                issues_found.append(f"Low average quality score: {stats[1]}/100")
+            
+except Exception as e:
+    print(f"❌ ERROR: {e}")
+    validation_passed = False
+    issues_found.append(f"Quality score check failed: {e}")
+
+# ============================================================================
+# CHECK 7: STORAGE SIZE REPORT
+# ============================================================================
+
+print("\n" + "-" * 80)
+print("CHECK 7: Storage Size Report")
+print("-" * 80)
+
+try:
+    with engine.connect() as conn:
+        # Get table size
+        result = conn.execute(text("""
+            SELECT 
+                pg_size_pretty(pg_total_relation_size('curated_spending_snapshots')) as total_size,
+                pg_size_pretty(pg_relation_size('curated_spending_snapshots')) as table_size,
+                pg_size_pretty(pg_indexes_size('curated_spending_snapshots')) as indexes_size
+        """))
+        
+        sizes = result.fetchone()
+        print(f"Total Size (Table + Indexes): {sizes[0]}")
+        print(f"Table Size: {sizes[1]}")
+        print(f"Indexes Size: {sizes[2]}")
+        
+        # Get row count and calculate per-row size
+        result = conn.execute(text("""
+            SELECT 
+                COUNT(*) as total_rows,
+                pg_total_relation_size('curated_spending_snapshots') as total_bytes
+            FROM curated_spending_snapshots
+        """))
+        
+        stats = result.fetchone()
+        if stats[0] > 0:
+            bytes_per_row = stats[1] / stats[0]
+            print(f"\nTotal Records: {stats[0]:,}")
+            print(f"Average Size per Record: {bytes_per_row:,.0f} bytes ({bytes_per_row/1024:.2f} KB)")
+        
+        # Size by version
+        print("\n📊 Storage by Version:")
+        result = conn.execute(text("""
+            SELECT 
+                snapshot_version,
+                COUNT(*) as record_count,
+                pg_size_pretty(
+                    COUNT(*) * (
+                        SELECT pg_total_relation_size('curated_spending_snapshots')::NUMERIC / 
+                               NULLIF(COUNT(*), 0)
+                        FROM curated_spending_snapshots
+                    )::BIGINT
+                ) as estimated_size
+            FROM curated_spending_snapshots
+            GROUP BY snapshot_version
+            ORDER BY snapshot_version DESC
+            LIMIT 10
+        """))
+        
+        print(f"{'Version':<10} {'Records':<12} {'Est. Size':<15}")
+        print("-" * 80)
+        
+        for row in result:
+            ver = f"V{row[0]}"
+            records = f"{row[1]:,}"
+            size = row[2]
+            print(f"{ver:<10} {records:<12} {size:<15}")
+        
+        # Storage recommendations
+        print("\n💡 Storage Recommendations:")
+        
+        version_count = conn.execute(text("""
+            SELECT COUNT(DISTINCT snapshot_version) 
+            FROM curated_spending_snapshots
+        """)).fetchone()[0]
+        
+        if version_count > 30:
+            print(f"   ⚠️  You have {version_count} versions. Consider:")
+            print(f"      - Archive old versions to cold storage")
+            print(f"      - Delete versions older than 30 days if not needed")
+            issues_found.append(f"{version_count} versions consuming storage")
+        elif version_count > 10:
+            print(f"   ℹ️  You have {version_count} versions - monitor growth")
+        else:
+            print(f"   ✓ Storage usage is reasonable ({version_count} versions)")
+        
+        print(f"\n✅ PASS: Storage report generated successfully")
+            
+except Exception as e:
+    print(f"❌ ERROR: {e}")
+    validation_passed = False
+    issues_found.append(f"Storage size check failed: {e}")
+
+# ============================================================================
+# CHECK 8: DUPLICATE STG_SPENDING_IDS WITHIN SAME VERSION
+# ============================================================================
+
+print("\n" + "-" * 80)
+print("CHECK 8: Duplicate stg_spending_ids Check")
+print("-" * 80)
+
+try:
+    with engine.connect() as conn:
+        # Check for duplicates within same version
+        result = conn.execute(text("""
+            SELECT 
+                snapshot_version,
+                stg_spending_id,
+                COUNT(*) as duplicate_count
+            FROM curated_spending_snapshots
+            GROUP BY snapshot_version, stg_spending_id
+            HAVING COUNT(*) > 1
+            ORDER BY snapshot_version DESC, duplicate_count DESC
+            LIMIT 20
+        """))
+        
+        duplicates = result.fetchall()
+        
+        if len(duplicates) == 0:
+            print("✅ PASS: No duplicate stg_spending_ids found within same version")
+        else:
+            print(f"❌ FAIL: Found {len(duplicates)} cases of duplicate stg_spending_ids!")
+            validation_passed = False
+            
+            # Count total duplicate records
+            total_dup_records = sum([row[2] - 1 for row in duplicates])  # -1 because 1 is valid
+            issues_found.append(f"{len(duplicates)} duplicate stg_spending_ids found")
+            
+            print(f"\n⚠️  Showing first 20 duplicates:")
+            print(f"{'Version':<10} {'STG ID':<12} {'Count':<10}")
+            print("-" * 80)
+            
+            for row in duplicates:
+                ver = f"V{row[0]}"
+                stg_id = row[1]
+                count = row[2]
+                print(f"{ver:<10} {stg_id:<12} {count:<10}")
+            
+            print(f"\n💡 This indicates a data integrity issue - each stg_spending_id should")
+            print(f"   appear exactly once per version. Total duplicate records: {total_dup_records}")
+        
+        # Check across all versions (should be duplicates by design)
+        result = conn.execute(text("""
+            SELECT 
+                stg_spending_id,
+                COUNT(DISTINCT snapshot_version) as version_count
+            FROM curated_spending_snapshots
+            GROUP BY stg_spending_id
+            HAVING COUNT(DISTINCT snapshot_version) > 1
+            LIMIT 5
+        """))
+        
+        cross_version = result.fetchall()
+        
+        if len(cross_version) > 0:
+            print(f"\nℹ️  Info: {len(cross_version)} stg_spending_ids appear in multiple versions")
+            print("   (This is EXPECTED behavior - same IDs across versions)")
+            
+            # Show example
+            example = cross_version[0]
+            print(f"   Example: stg_spending_id {example[0]} appears in {example[1]} versions")
+            
+except Exception as e:
+    print(f"❌ ERROR: {e}")
+    validation_passed = False
+    issues_found.append(f"Duplicate check failed: {e}")
 
 # ============================================================================
 # SUMMARY
