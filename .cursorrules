@@ -9,6 +9,7 @@ This project builds an intelligent ETL (Extract, Transform, Load) pipeline for f
 - Support evaluation of financial strategies and marketing policies
 - Provide actionable insights for banks, fintech companies, and digital commerce platforms (Shopee, Grab, PayNow, etc.)
 - Bridge the gap between raw financial data and actionable intelligence
+- **ULTIMATE GOAL**: Answer "What lifestyle choices can improve my financial burden?"
 
 ## Target Use Cases
 - Banks and financial institutions
@@ -19,10 +20,44 @@ This project builds an intelligent ETL (Extract, Transform, Load) pipeline for f
 - Financial planning and forecasting
 
 ## Technical Architecture
-The project follows a standard ETL pipeline architecture:
-1. **Extract**: Collect financial data from multiple sources
-2. **Transform**: Clean, normalize, and enrich data
-3. **Load**: Store processed data in structured formats for analysis
+The project follows a 5-stage data warehouse architecture:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│              ETL PIPELINE ARCHITECTURE                   │
+└─────────────────────────────────────────────────────────┘
+
+STAGE 1: SRC (Source/Raw Layer) ✅ COMPLETE
+  Purpose: Load raw data as-is from files
+  Tables: src_daily_spending, src_monthly_income
+  Features: Batch tracking, error logging, atomic transactions
+  ↓
+
+STAGE 2: STG (Staging/Normalized Layer) ✅ COMPLETE
+  Purpose: Clean, normalize to 3NF star schema
+  Tables: 4 dimensions + 1 fact table + 1 view
+  Features: Data quality scoring, business rules, lineage tracking
+  ↓
+
+STAGE 3: CURATED (Snapshot Layer) 🎯 IN PROGRESS
+  Purpose: Daily snapshots for historical trend analysis
+  Tables: curated_spending_snapshots
+  Features: Version tracking, same-day replacement, point-in-time queries
+  ↓
+
+STAGE 4: DST (Dissemination Staging/Aggregation) ❌ NOT STARTED
+  Purpose: Pre-aggregated metrics for fast reporting
+  Tables: Monthly summaries, category trends, person analytics
+  Features: Pre-calculated KPIs, optimized for dashboards
+  ↓
+
+STAGE 5: DIS (Dissemination Views/Insights) ❌ NOT STARTED
+  Purpose: Business insights & financial recommendations
+  Views: Financial recommendations, spending patterns, budget alerts
+  Features: Actionable insights, lifestyle recommendations
+```
+
+**Current Progress: 40% Complete (2 of 5 stages finished)**
 
 ## Code Standards & Best Practices
 
@@ -63,10 +98,51 @@ The project follows a standard ETL pipeline architecture:
 - Include sample data formats and examples
 
 ## Project Structure
-- `/data/` - Raw and processed data files
-- `/notebooks/` - Jupyter notebooks for exploration and prototyping
-- `/scripts/` - Python scripts for ETL pipeline components
-- `/sql/` - SQL queries and database schemas
+```
+/ETL-hackathon-project/
+├── /data/                          # Raw and processed data files
+│   └── daily_spending_sample.parquet
+├── /notebooks/                     # Jupyter notebooks for exploration
+│   ├── 01_generate_sample_data.ipynb
+│   ├── 02_check_sample_data.ipynb
+│   ├── 03_testing_supabase_env.ipynb
+│   └── 04_test_database_connection.ipynb
+├── /scripts/                       # Python ETL pipeline scripts
+│   ├── /00_logging_stage/         # ✅ Logging infrastructure
+│   │   └── logging_tables_creation.py
+│   ├── /01_src_stage/             # ✅ COMPLETE - Raw data layer
+│   │   ├── 01_src_spending_creation.py
+│   │   ├── 02_load_parquet_to_src.py
+│   │   └── 03_run_validation.py
+│   ├── /02_stg_stage/             # ✅ COMPLETE - Normalized layer
+│   │   ├── 01_stg_tables_creation.py
+│   │   ├── 02_transform_and_load_stg.py
+│   │   ├── 03_data_quality_report.py
+│   │   ├── README.md
+│   │   └── IMPLEMENTATION_SUMMARY.md
+│   ├── /03_curated_stage/         # 🎯 IN PROGRESS - Snapshot layer
+│   │   └── [To be created]
+│   ├── /04_dst_stage/             # ❌ NOT STARTED - Aggregation layer
+│   │   └── [Future work]
+│   └── /05_dis_stage/             # ❌ NOT STARTED - Insights layer
+│       └── [Future work]
+├── /sql/                          # SQL DDL and queries
+│   ├── /00_logging_stage/         # ✅ Log tables
+│   │   └── log_01_create_table.sql
+│   ├── /01_src_stage/             # ✅ Source tables
+│   │   ├── src_01_create_tables.sql
+│   │   └── src_02_error_validation.sql
+│   ├── /02_stg_stage/             # ✅ Staging tables
+│   │   └── stg_01_create_tables.sql
+│   ├── /03_curated_stage/         # 🎯 IN PROGRESS
+│   │   └── [To be created]
+│   ├── /04_dst_stage/             # ❌ NOT STARTED
+│   │   └── [Future work]
+│   └── /05_dis_stage/             # ❌ NOT STARTED
+│       └── [Future work]
+├── requirements.txt               # Python dependencies
+└── .cursorrules                   # Project guidelines (this file)
+```
 
 ## Data Handling Considerations
 - Financial data requires high accuracy (use Decimal for currency)
@@ -95,7 +171,443 @@ The project follows a standard ETL pipeline architecture:
 - Consider parallel processing for transformations
 - Monitor resource usage and bottlenecks
 
+---
+
+## 📊 PROJECT PROGRESS TRACKING
+
+### Overall Status: 40% Complete (2 of 5 stages)
+
+```
+Progress Bar:
+├── Stage 1 (SRC):     ████████████████████ 100% ✅
+├── Stage 2 (STG):     ████████████████████ 100% ✅
+├── Stage 3 (CURATED): ░░░░░░░░░░░░░░░░░░░░   0% 🎯 ← CURRENT
+├── Stage 4 (DST):     ░░░░░░░░░░░░░░░░░░░░   0% ❌
+└── Stage 5 (DIS):     ░░░░░░░░░░░░░░░░░░░░   0% ❌
+
+Estimated Time to Completion: 7-10 hours
+```
+
+---
+
+## ✅ COMPLETED STAGES
+
+### STAGE 1: SRC (Source Layer) - COMPLETE ✅
+
+**Purpose:** Load raw data as-is from files into the database
+
+**Completed Deliverables:**
+- ✅ Raw data tables: `src_daily_spending`, `src_monthly_income`
+- ✅ Error logging infrastructure: `etl_logs` table
+- ✅ Data loading scripts with chunked processing (memory-efficient)
+- ✅ Atomic transaction handling (all-or-nothing loads)
+- ✅ Batch tracking system: `load_batch_id`, `source_file`, `loaded_at`
+- ✅ Data validation queries
+- ✅ Requirements.txt for Python dependencies
+
+**Key Features Implemented:**
+- Parquet file reading with pandas
+- Chunk-based processing for large files
+- PostgreSQL COPY command for fast inserts
+- Comprehensive error logging
+- Data lineage tracking from source files
+
+**Files Created:**
+- `sql/01_src_stage/src_01_create_tables.sql`
+- `scripts/01_src_stage/01_src_spending_creation.py`
+- `scripts/01_src_stage/02_load_parquet_to_src.py`
+- `scripts/01_src_stage/03_run_validation.py`
+- `sql/01_src_stage/src_02_error_validation.sql`
+
+---
+
+### STAGE 2: STG (Staging Layer) - COMPLETE ✅
+
+**Purpose:** Clean, normalize, and transform raw data into a 3NF star schema
+
+**Completed Deliverables:**
+- ✅ 4 Dimension tables (normalized reference data):
+  - `stg_dim_person` - Person/household information
+  - `stg_dim_category` - Spending categories
+  - `stg_dim_location` - Transaction locations
+  - `stg_dim_payment_method` - Payment method types
+- ✅ 1 Fact table: `stg_fact_spending` - Transaction facts with foreign keys
+- ✅ 1 Analytical view: `vw_stg_spending_enriched` - Denormalized view for easy querying
+- ✅ ETL transformation script with advanced features
+- ✅ Data quality scoring system (0-100 points)
+- ✅ Comprehensive validation and reporting
+
+**Key Features Implemented:**
+- Multi-format date parsing (handles various date formats)
+- Currency cleaning (removes symbols, handles decimals)
+- Business rule classification (auto-categorizes transactions)
+- Data quality scoring with weighted metrics:
+  - Required fields (30 points)
+  - Date validity (20 points)
+  - Amount validity (20 points)
+  - Description quality (15 points)
+  - Category assignment (15 points)
+- Idempotent loading (ON CONFLICT DO UPDATE for reruns)
+- Full data lineage tracking (src_id references)
+- Validation script with quality grading (A+, A, B, C, D, F)
+
+**Files Created:**
+- `sql/02_stg_stage/stg_01_create_tables.sql`
+- `scripts/02_stg_stage/01_stg_tables_creation.py`
+- `scripts/02_stg_stage/02_transform_and_load_stg.py`
+- `scripts/02_stg_stage/03_data_quality_report.py`
+- `scripts/02_stg_stage/README.md`
+- `scripts/02_stg_stage/IMPLEMENTATION_SUMMARY.md`
+
+**Database Schema:**
+```sql
+-- Dimension Tables (reference data)
+stg_dim_person (person_id, full_name, email, phone)
+stg_dim_category (category_id, category_name, parent_category, category_type)
+stg_dim_location (location_id, location_name, city, country, region)
+stg_dim_payment_method (payment_method_id, payment_method_name, payment_type)
+
+-- Fact Table (transactions)
+stg_fact_spending (
+  spending_id, date, amount_usd, description,
+  person_id FK, category_id FK, location_id FK, payment_method_id FK,
+  data_quality_score, src_id FK, processed_at
+)
+
+-- Analytical View
+vw_stg_spending_enriched (joins all dimensions for easy analysis)
+```
+
+---
+
+## 🎯 CURRENT STAGE: STAGE 3 - CURATED (In Progress)
+
+**Purpose:** Create daily snapshots of spending data for historical trend analysis
+
+**Target Deliverables:**
+- [ ] 1 Snapshot table: `curated_spending_snapshots`
+- [ ] Snapshot creation ETL script
+- [ ] Validation queries and scripts
+- [ ] Helper queries for common analysis patterns
+- [ ] Documentation (README.md)
+
+**Schema Design:**
+```sql
+CREATE TABLE curated_spending_snapshots (
+  snapshot_id BIGSERIAL PRIMARY KEY,
+  snapshot_date DATE NOT NULL,
+  snapshot_version INTEGER NOT NULL,
+  
+  -- All spending data from STG layer
+  spending_id BIGINT NOT NULL,
+  date DATE NOT NULL,
+  amount_usd NUMERIC(12,2) NOT NULL,
+  description TEXT,
+  
+  -- Denormalized dimensions (for easy querying)
+  person_name VARCHAR(255),
+  category_name VARCHAR(100),
+  location_name VARCHAR(255),
+  payment_method_name VARCHAR(100),
+  
+  -- Metadata
+  data_quality_score INTEGER,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  
+  -- Composite unique constraint (same-day snapshots increment version)
+  UNIQUE (snapshot_date, snapshot_version, spending_id)
+);
+```
+
+**Key Features to Implement:**
+- Daily snapshot creation from `vw_stg_spending_enriched`
+- Same-day replacement logic (delete + reinsert for same date)
+- Version tracking (v1, v2, v3 for multiple same-day snapshots)
+- Point-in-time queries (query data as it existed on specific dates)
+- Historical trend analysis support
+
+**Files to Create:**
+1. `sql/03_curated_stage/curated_01_create_table.sql` - DDL for snapshot table
+2. `scripts/03_curated_stage/01_curated_table_creation.py` - Execute DDL
+3. `scripts/03_curated_stage/02_create_snapshot.py` - Daily snapshot ETL script
+4. `sql/03_curated_stage/curated_02_validation.sql` - Validation queries
+5. `scripts/03_curated_stage/03_run_validation.py` - Validation script
+6. `sql/03_curated_stage/curated_03_helper_queries.sql` - Common analysis queries
+7. `scripts/03_curated_stage/README.md` - Documentation and usage examples
+
+**Estimated Time:** 2-3 hours
+
+**Next Steps:**
+1. Create `/sql/03_curated_stage/` directory
+2. Create `/scripts/03_curated_stage/` directory
+3. Write DDL script and execute
+4. Build snapshot creation script
+5. Test with multiple snapshots (same day and different days)
+6. Add validation and helper queries
+7. Document usage
+
+---
+
+## ❌ FUTURE STAGES (Not Yet Started)
+
+### STAGE 4: DST (Dissemination Staging) - NOT STARTED ❌
+
+**Purpose:** Create pre-aggregated tables optimized for fast reporting and analytics
+
+**Planned Deliverables:**
+- [ ] `dst_monthly_spending_summary` - Monthly totals by person, category, location
+- [ ] `dst_category_trends` - Category spending over time with MoM/YoY changes
+- [ ] `dst_person_analytics` - Per-person spending patterns and statistics
+- [ ] `dst_payment_method_summary` - Payment method usage trends
+- [ ] ETL scripts to populate aggregation tables
+- [ ] Incremental update logic (only process new snapshots)
+- [ ] Validation scripts
+
+**Key Features to Implement:**
+- Pre-calculated monthly aggregations
+- Month-over-month (MoM) trend calculations
+- Year-over-year (YoY) comparisons
+- Top N categories by spending
+- Average daily/weekly/monthly spending per person
+- Payment method preference analysis
+- Incremental updates (process only new curated snapshots)
+
+**Files to Create:**
+- `sql/04_dst_stage/dst_01_create_tables.sql`
+- `scripts/04_dst_stage/01_dst_tables_creation.py`
+- `scripts/04_dst_stage/02_populate_monthly_summary.py`
+- `scripts/04_dst_stage/03_populate_category_trends.py`
+- `scripts/04_dst_stage/04_populate_person_analytics.py`
+- `scripts/04_dst_stage/05_populate_payment_summary.py`
+- `scripts/04_dst_stage/06_run_validation.py`
+- `scripts/04_dst_stage/README.md`
+
+**Estimated Time:** 3-4 hours
+
+**Why This Stage Matters:**
+- Pre-aggregated data = instant dashboard queries (no need to aggregate on the fly)
+- Supports business intelligence tools (Tableau, Power BI, Looker)
+- Enables fast trend analysis without scanning millions of transactions
+
+---
+
+### STAGE 5: DIS (Dissemination Views) - NOT STARTED ❌
+
+**Purpose:** Create business-friendly views and analytical queries that answer the key question: "What lifestyle choices can improve my financial burden?"
+
+**Planned Deliverables:**
+- [ ] `vw_current_spending_summary` - Latest snapshot overview
+- [ ] `vw_monthly_category_breakdown` - Spending by category with percentages
+- [ ] `vw_spending_trends` - WoW/MoM trends with trend indicators (↑↓)
+- [ ] `vw_top_spending_categories` - Top 10 categories with period comparisons
+- [ ] `vw_financial_recommendations` ⭐ **KEY VIEW** - Actionable insights for cost reduction
+- [ ] `vw_budget_alerts` - Categories exceeding thresholds, unusual patterns
+- [ ] Insight generation queries
+- [ ] Dashboard query templates
+
+**Key Features to Implement:**
+- Spending pattern analysis (identify high-cost categories)
+- Cost reduction recommendations (suggest areas to cut spending)
+- Lifestyle improvement suggestions (healthier, cheaper alternatives)
+- Budget threshold alerts (overspending warnings)
+- Trend-based predictions (projected future spending)
+- Comparison to peer benchmarks (optional: compare to similar households)
+
+**Example Recommendations Logic:**
+```sql
+-- Identify high-spending categories with reduction potential
+SELECT 
+  category_name,
+  monthly_avg_spending,
+  CASE 
+    WHEN category_name = 'Dining Out' AND monthly_avg_spending > 500 
+      THEN 'Cook at home 2-3 more days per week (potential savings: $200/month)'
+    WHEN category_name = 'Transportation' AND monthly_avg_spending > 300
+      THEN 'Consider public transport or carpooling (potential savings: $100/month)'
+    WHEN category_name = 'Subscriptions' AND monthly_avg_spending > 100
+      THEN 'Review and cancel unused subscriptions (potential savings: $50/month)'
+    -- Add more rules...
+  END as recommendation
+FROM dst_monthly_spending_summary
+WHERE monthly_avg_spending > category_benchmark
+ORDER BY potential_savings DESC;
+```
+
+**Files to Create:**
+- `sql/05_dis_stage/dis_01_create_views.sql`
+- `sql/05_dis_stage/dis_02_financial_insights.sql`
+- `sql/05_dis_stage/dis_03_recommendation_engine.sql`
+- `sql/05_dis_stage/dis_04_dashboard_queries.sql`
+- `scripts/05_dis_stage/01_deploy_views.py`
+- `scripts/05_dis_stage/02_generate_insights_report.py`
+- `scripts/05_dis_stage/README.md`
+
+**Estimated Time:** 2-3 hours
+
+**Why This Stage Matters:**
+- **This is the ultimate goal of the entire project**
+- Transforms raw financial data into actionable intelligence
+- Directly answers: "What can I do differently to save money?"
+- Provides personalized recommendations based on actual spending patterns
+- Enables data-driven financial decision-making
+
+---
+
+## 🗓️ PROJECT ROADMAP
+
+### Completed Milestones ✅
+- [x] **Milestone 1:** Set up project structure and dependencies (Week 1)
+- [x] **Milestone 2:** Build SRC layer with raw data loading (Week 1)
+- [x] **Milestone 3:** Build STG layer with normalization and data quality (Week 2)
+
+### Current Milestone 🎯
+- [ ] **Milestone 4:** Build CURATED layer with snapshot functionality (Week 3) ← **YOU ARE HERE**
+  - [ ] Design snapshot schema
+  - [ ] Create snapshot table
+  - [ ] Build snapshot ETL script
+  - [ ] Test multiple snapshots
+  - [ ] Add validation
+  - [ ] Document usage
+
+### Upcoming Milestones ❌
+- [ ] **Milestone 5:** Build DST layer with pre-aggregations (Week 3-4)
+  - [ ] Design aggregation tables
+  - [ ] Create monthly summary table
+  - [ ] Create category trends table
+  - [ ] Create person analytics table
+  - [ ] Build population scripts
+  - [ ] Add validation
+
+- [ ] **Milestone 6:** Build DIS layer with insights and recommendations (Week 4)
+  - [ ] Design analytical views
+  - [ ] Create spending summary view
+  - [ ] Create trends view
+  - [ ] Create recommendations view ⭐
+  - [ ] Build insight generation queries
+  - [ ] Test all views
+
+- [ ] **Milestone 7:** Final testing and documentation (Week 4)
+  - [ ] End-to-end pipeline testing
+  - [ ] Performance optimization
+  - [ ] Create main project README
+  - [ ] Add usage examples
+  - [ ] Create demo dashboard queries
+
+---
+
+## 📋 DETAILED TASK CHECKLIST
+
+### ✅ STAGE 1: SRC - 100% COMPLETE
+- [x] Design raw data schema
+- [x] Create source tables (src_daily_spending, src_monthly_income)
+- [x] Create logging table (etl_logs)
+- [x] Build data loading script with chunking
+- [x] Implement error handling and logging
+- [x] Add batch tracking
+- [x] Create validation queries
+- [x] Test with sample data
+
+### ✅ STAGE 2: STG - 100% COMPLETE
+- [x] Design normalized 3NF star schema
+- [x] Create dimension tables (person, category, location, payment_method)
+- [x] Create fact table (stg_fact_spending)
+- [x] Create enriched analytical view
+- [x] Build transformation logic (date parsing, currency cleaning)
+- [x] Implement data quality scoring (0-100 scale)
+- [x] Add idempotent loading (ON CONFLICT handling)
+- [x] Create validation script with quality grading
+- [x] Test complete SRC → STG pipeline
+- [x] Write documentation (README, IMPLEMENTATION_SUMMARY)
+
+### 🎯 STAGE 3: CURATED - 0% COMPLETE (NEXT TASKS)
+- [ ] Design snapshot schema with versioning
+- [ ] Create curated_spending_snapshots table
+- [ ] Build snapshot creation ETL script
+- [ ] Implement same-day replacement logic
+- [ ] Add version tracking
+- [ ] Create validation queries (snapshot counts, data accuracy)
+- [ ] Build validation script with reporting
+- [ ] Create helper queries (trend analysis, point-in-time queries)
+- [ ] Test multiple snapshots (same day and different days)
+- [ ] Write documentation (README with usage examples)
+
+### ❌ STAGE 4: DST - 0% COMPLETE (FUTURE TASKS)
+- [ ] Design aggregation table schemas
+- [ ] Create monthly summary table
+- [ ] Create category trends table
+- [ ] Create person analytics table
+- [ ] Create payment method summary table
+- [ ] Build monthly summary population script
+- [ ] Build category trends population script
+- [ ] Build person analytics population script
+- [ ] Implement incremental update logic
+- [ ] Add validation queries and scripts
+- [ ] Test all aggregations
+- [ ] Write documentation
+
+### ❌ STAGE 5: DIS - 0% COMPLETE (FUTURE TASKS)
+- [ ] Design analytical view schemas
+- [ ] Create current spending summary view
+- [ ] Create monthly category breakdown view
+- [ ] Create spending trends view
+- [ ] Create top categories view
+- [ ] Create financial recommendations view ⭐
+- [ ] Create budget alerts view
+- [ ] Build insight generation queries
+- [ ] Build recommendation engine logic
+- [ ] Create dashboard query templates
+- [ ] Test all views with sample data
+- [ ] Generate sample insights report
+- [ ] Write documentation
+
+---
+
+## 🎯 CURRENT FOCUS: Building CURATED Layer
+
+**What to build next:**
+
+1. **Create directories** (if not exists):
+   ```bash
+   mkdir -p sql/03_curated_stage
+   mkdir -p scripts/03_curated_stage
+   ```
+
+2. **Create snapshot table** (30 mins):
+   - Write `sql/03_curated_stage/curated_01_create_table.sql`
+   - Write `scripts/03_curated_stage/01_curated_table_creation.py`
+   - Execute and verify table creation
+
+3. **Build snapshot ETL script** (1 hour):
+   - Write `scripts/03_curated_stage/02_create_snapshot.py`
+   - Implement snapshot creation logic:
+     - Check for existing snapshots on same date
+     - Increment version number if needed
+     - Copy all data from `vw_stg_spending_enriched`
+     - Add snapshot metadata (date, version, created_at)
+
+4. **Add validation** (30 mins):
+   - Write `sql/03_curated_stage/curated_02_validation.sql`
+   - Write `scripts/03_curated_stage/03_run_validation.py`
+   - Validate snapshot counts, data accuracy, version tracking
+
+5. **Create helper queries** (30 mins):
+   - Write `sql/03_curated_stage/curated_03_helper_queries.sql`
+   - Common queries: latest snapshot, snapshot comparison, trend analysis
+
+6. **Test thoroughly** (30 mins):
+   - Run snapshot creation multiple times
+   - Test same-day replacement (version incrementing)
+   - Verify data accuracy against STG layer
+
+7. **Document** (30 mins):
+   - Write `scripts/03_curated_stage/README.md`
+   - Include usage examples, troubleshooting, FAQs
+
+---
+
 ## When Assisting with This Project
+
+### General Principles
 - Prioritize data accuracy and integrity
 - Suggest scalable solutions
 - Consider real-world financial data challenges
@@ -103,4 +615,121 @@ The project follows a standard ETL pipeline architecture:
 - Focus on maintainability and extensibility
 - Propose data validation strategies
 - Consider edge cases in financial transactions
+
+### Context-Aware Assistance
+When helping with this project, always:
+
+1. **Check Current Stage**: The project is at **Stage 3 (CURATED) - 0% complete**
+   - Stages 1 (SRC) and 2 (STG) are fully complete ✅
+   - Stage 3 is the current focus 🎯
+   - Stages 4 (DST) and 5 (DIS) are planned but not started ❌
+
+2. **Understand the Architecture**: This is a 5-stage data warehouse:
+   ```
+   SRC → STG → CURATED → DST → DIS
+   (Raw) (Clean) (Snapshot) (Aggregate) (Insights)
+   ```
+
+3. **Follow Established Patterns**: Look at completed stages for coding patterns:
+   - Python scripts follow the same structure (connection handling, logging, error handling)
+   - SQL scripts are well-commented and modular
+   - Each stage has: DDL, ETL scripts, validation scripts, documentation
+
+4. **Maintain Consistency**:
+   - Use the same naming conventions (`stg_dim_*`, `stg_fact_*`, etc.)
+   - Follow the same file numbering (01_, 02_, 03_)
+   - Keep the same code style and patterns
+   - Use the same connection handling approach (Supabase with environment variables)
+
+5. **Know the Goal**: The ultimate objective is answering:
+   > **"What lifestyle choices can improve my financial burden?"**
+   
+   All stages build toward this final goal in Stage 5 (DIS).
+
+### Quick Reference: What's Been Built
+
+**✅ SRC Layer** (scripts/01_src_stage/):
+- Raw data tables with batch tracking
+- Parquet file loading with chunking
+- Error logging infrastructure
+
+**✅ STG Layer** (scripts/02_stg_stage/):
+- 3NF star schema (4 dimensions + 1 fact)
+- Data quality scoring (0-100)
+- Multi-format parsing and cleaning
+- Idempotent loading (ON CONFLICT)
+- Comprehensive validation
+
+**🎯 CURATED Layer** (scripts/03_curated_stage/) ← **NEXT TO BUILD**:
+- Daily spending snapshots
+- Version tracking for same-day updates
+- Historical trend analysis support
+
+**❌ DST Layer** (scripts/04_dst_stage/) - Future:
+- Pre-aggregated monthly summaries
+- Category trends with MoM/YoY
+- Person-level analytics
+
+**❌ DIS Layer** (scripts/05_dis_stage/) - Future:
+- Financial recommendations ⭐ **KEY DELIVERABLE**
+- Spending pattern insights
+- Budget alerts and warnings
+
+### Quick Start for Stage 3 (Current Work)
+
+If asked to help with Stage 3 CURATED, the immediate tasks are:
+
+1. Create directories: `sql/03_curated_stage/` and `scripts/03_curated_stage/`
+2. Write `curated_01_create_table.sql` with snapshot schema
+3. Write `01_curated_table_creation.py` to execute DDL
+4. Write `02_create_snapshot.py` for daily snapshot creation
+5. Write validation queries and scripts
+6. Write helper queries for analysis
+7. Document everything in README.md
+
+### Database Connection Info
+- Database: Supabase (PostgreSQL)
+- Connection: Environment variables (SUPABASE_URL, SUPABASE_KEY)
+- Look at existing scripts in `scripts/01_src_stage/` or `scripts/02_stg_stage/` for connection examples
+
+### Key Tables to Know
+
+**Source Layer:**
+- `src_daily_spending` - Raw spending data
+- `etl_logs` - Error and process logging
+
+**Staging Layer:**
+- `stg_dim_person`, `stg_dim_category`, `stg_dim_location`, `stg_dim_payment_method` - Dimensions
+- `stg_fact_spending` - Fact table
+- `vw_stg_spending_enriched` - Denormalized view (source for CURATED snapshots)
+
+**Curated Layer (to be built):**
+- `curated_spending_snapshots` - Daily snapshots with versioning
+
+---
+
+## 📊 PROJECT SUMMARY
+
+**Status**: 40% Complete (2 of 5 stages finished)
+
+**Completed**: 
+- ✅ Stage 1 (SRC): Raw data loading
+- ✅ Stage 2 (STG): Normalized star schema with data quality
+
+**Current Focus**: 
+- 🎯 Stage 3 (CURATED): Building daily snapshot functionality
+
+**Remaining Work**: 
+- ❌ Stage 4 (DST): Pre-aggregated analytics tables
+- ❌ Stage 5 (DIS): Financial insights and recommendations
+
+**Time to Completion**: 7-10 hours of focused development
+
+**Final Goal**: Deliver actionable financial insights answering "What lifestyle choices can improve my financial burden?"
+
+---
+
+**Last Updated**: October 21, 2025
+**Current Stage**: CURATED (Stage 3) - 0% complete
+**Next Milestone**: Complete CURATED layer with snapshot functionality
 
