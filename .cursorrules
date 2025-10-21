@@ -39,7 +39,7 @@ STAGE 2: STG (Staging/Normalized Layer) ✅ COMPLETE
   Features: Data quality scoring, business rules, lineage tracking
   ↓
 
-STAGE 3: CURATED (Snapshot Layer) 🎯 IN PROGRESS
+STAGE 3: CURATED (Snapshot Layer) ✅ COMPLETE
   Purpose: Versioned snapshots of ALL historical data for time-travel analysis
   Tables: curated_spending_snapshots
   Features: Full data snapshots per version, is_latest flag, point-in-time queries
@@ -57,7 +57,7 @@ STAGE 5: DIS (Dissemination Views/Insights) ❌ NOT STARTED
   Features: Actionable insights, lifestyle recommendations
 ```
 
-**Current Progress: 40% Complete (2 of 5 stages finished)**
+**Current Progress: 60% Complete (3 of 5 stages finished)**
 
 ## Code Standards & Best Practices
 
@@ -120,8 +120,11 @@ STAGE 5: DIS (Dissemination Views/Insights) ❌ NOT STARTED
 │   │   ├── 03_data_quality_report.py
 │   │   ├── README.md
 │   │   └── IMPLEMENTATION_SUMMARY.md
-│   ├── /03_curated_stage/         # 🎯 IN PROGRESS - Versioned snapshots
-│   │   └── [To be created]
+│   ├── /03_curated_stage/         # ✅ COMPLETE - Versioned snapshots
+│   │   ├── 01_cur_tables_creation.py
+│   │   ├── 02_create_snapshot.py
+│   │   ├── 03_validation_report.py
+│   │   └── README.md
 │   ├── /04_dst_stage/             # ❌ NOT STARTED - Aggregation layer
 │   │   └── [Future work]
 │   └── /05_dis_stage/             # ❌ NOT STARTED - Insights layer
@@ -134,8 +137,9 @@ STAGE 5: DIS (Dissemination Views/Insights) ❌ NOT STARTED
 │   │   └── src_02_error_validation.sql
 │   ├── /02_stg_stage/             # ✅ Staging tables
 │   │   └── stg_01_create_tables.sql
-│   ├── /03_curated_stage/         # 🎯 IN PROGRESS
-│   │   └── [To be created]
+│   ├── /03_curated_stage/         # ✅ COMPLETE
+│   │   ├── cur_01_create_table.sql
+│   │   └── cur_02_helper_queries.sql
 │   ├── /04_dst_stage/             # ❌ NOT STARTED
 │   │   └── [Future work]
 │   └── /05_dis_stage/             # ❌ NOT STARTED
@@ -175,17 +179,17 @@ STAGE 5: DIS (Dissemination Views/Insights) ❌ NOT STARTED
 
 ## 📊 PROJECT PROGRESS TRACKING
 
-### Overall Status: 40% Complete (2 of 5 stages)
+### Overall Status: 60% Complete (3 of 5 stages)
 
 ```
 Progress Bar:
 ├── Stage 1 (SRC):     ████████████████████ 100% ✅
 ├── Stage 2 (STG):     ████████████████████ 100% ✅
-├── Stage 3 (CURATED): ░░░░░░░░░░░░░░░░░░░░   0% 🎯 ← CURRENT
-├── Stage 4 (DST):     ░░░░░░░░░░░░░░░░░░░░   0% ❌
+├── Stage 3 (CURATED): ████████████████████ 100% ✅
+├── Stage 4 (DST):     ░░░░░░░░░░░░░░░░░░░░   0% ❌ ← NEXT
 └── Stage 5 (DIS):     ░░░░░░░░░░░░░░░░░░░░   0% ❌
 
-Estimated Time to Completion: 7-10 hours
+Estimated Time to Completion: 5-7 hours
 ```
 
 ---
@@ -280,115 +284,64 @@ vw_stg_spending_enriched (joins all dimensions for easy analysis)
 
 ---
 
-## 🎯 CURRENT STAGE: STAGE 3 - CURATED (In Progress)
+### STAGE 3: CURATED (Snapshot Layer) - COMPLETE ✅
 
 **Purpose:** Create versioned snapshots of ALL historical spending data for point-in-time analysis
 
-**How CURATED Works:**
-- Each snapshot captures **ALL historical data** up to the snapshot date
-- Running on 2025-10-20 → Creates Version 1 with ALL data up to Oct 20
-- Running on 2025-10-21 → Creates Version 2 with ALL data up to Oct 21 (including new Oct 21 data)
-- Running on 2025-10-22 → Creates Version 3 with ALL data up to Oct 22
-- **Latest version** gets `is_latest = 1`, all previous versions get `is_latest = 0`
-- Enables time-travel queries: "What did my spending look like on Oct 20?"
+**Completed Deliverables:**
+- ✅ 1 Snapshot table: `curated_spending_snapshots` (28 columns, 8 indexes)
+- ✅ Versioned snapshot creation script
+- ✅ Validation and quality report script
+- ✅ 22+ helper queries for common analysis patterns
+- ✅ Comprehensive documentation (README.md)
 
-**Example Scenario:**
-```
-Oct 20, 2025: Run script
-  → Version 1 created with 1000 records (all historical data)
-  → is_latest = 1
+**Key Features Implemented:**
+- Full historical snapshot (copies ALL data per version)
+- Version management with auto-increment (1, 2, 3...)
+- `is_latest` flag (only 1 version has `is_latest = 1` at any time)
+- Denormalized dimensions for fast queries without joins
+- Point-in-time queries (time-travel to any historical version)
+- Growth tracking and version comparison
+- Data lineage (links to SRC and STG)
+- Comprehensive validation (5 quality checks)
 
-Oct 21, 2025: Run script (50 new transactions added to STG)
-  → Version 1: is_latest changed to 0
-  → Version 2 created with 1050 records (all 1000 + 50 new)
-  → is_latest = 1
+**Files Created:**
+- `sql/03_curated_stage/cur_01_create_table.sql`
+- `sql/03_curated_stage/cur_02_helper_queries.sql`
+- `scripts/03_curated_stage/01_cur_tables_creation.py`
+- `scripts/03_curated_stage/02_create_snapshot.py`
+- `scripts/03_curated_stage/03_validation_report.py`
+- `scripts/03_curated_stage/README.md`
 
-Oct 22, 2025: Run script (30 new transactions added to STG)
-  → Version 1: is_latest = 0
-  → Version 2: is_latest changed to 0
-  → Version 3 created with 1080 records (all 1050 + 30 new)
-  → is_latest = 1
-
-Query Examples:
-- Get latest data: SELECT * WHERE is_latest = 1
-- Get Oct 20 snapshot: SELECT * WHERE snapshot_version = 1
-- Compare versions: SELECT COUNT(*) FROM ... GROUP BY snapshot_version
-```
-
-**Target Deliverables:**
-- [ ] 1 Snapshot table: `curated_spending_snapshots`
-- [ ] Snapshot creation ETL script
-- [ ] Validation queries and scripts
-- [ ] Helper queries for common analysis patterns
-- [ ] Documentation (README.md)
-
-**Schema Design:**
+**Database Schema:**
 ```sql
-CREATE TABLE curated_spending_snapshots (
-  snapshot_id BIGSERIAL PRIMARY KEY,
-  snapshot_date DATE NOT NULL,        -- Date when snapshot was created
-  snapshot_version INTEGER NOT NULL,  -- Incremental version number (1, 2, 3, ...)
-  is_latest SMALLINT DEFAULT 0,       -- 1 if this is the latest version, 0 otherwise
-  
-  -- All spending data from STG layer (denormalized for easy querying)
-  spending_id BIGINT NOT NULL,
-  transaction_date DATE NOT NULL,     -- Original transaction date
-  amount_usd NUMERIC(12,2) NOT NULL,
-  description TEXT,
-  
-  -- Denormalized dimensions (from STG enriched view)
-  person_name VARCHAR(255),
-  category_name VARCHAR(100),
-  location_name VARCHAR(255),
-  payment_method_name VARCHAR(100),
-  
-  -- Metadata
-  data_quality_score INTEGER,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  
-  -- Composite unique constraint (each version contains all spending records)
-  UNIQUE (snapshot_version, spending_id)
-);
+-- Snapshot Table (28 columns)
+curated_spending_snapshots (
+  snapshot_id, snapshot_version, snapshot_date, snapshot_batch_id, is_latest,
+  src_id, stg_spending_id,
+  person_id, category_id, location_id, payment_method_id,
+  person_name, category_name, category_group, location_name, location_type,
+  payment_method_name, payment_type,
+  spending_date, spending_year, spending_month, spending_quarter, spending_day_of_week,
+  amount_cleaned, currency_code, description,
+  data_quality_score, created_at
+)
 
--- Index for fast latest version queries
-CREATE INDEX idx_curated_snapshots_latest ON curated_spending_snapshots(is_latest) WHERE is_latest = 1;
-
--- Index for version-based queries
-CREATE INDEX idx_curated_snapshots_version ON curated_spending_snapshots(snapshot_version);
-
--- Index for date range queries
-CREATE INDEX idx_curated_snapshots_date ON curated_spending_snapshots(snapshot_date);
+-- 8 Performance Indexes including partial index on is_latest
 ```
 
-**Key Features to Implement:**
-1. **Full Historical Snapshot**: Copy ALL data from `vw_stg_spending_enriched` on each run
-2. **Version Management**: 
-   - Auto-increment version number (get MAX(snapshot_version) + 1)
-   - Set new snapshot `is_latest = 1`
-   - Update all previous snapshots `is_latest = 0`
-3. **Point-in-Time Queries**: Query specific versions to see historical state
-4. **Data Comparison**: Compare different versions to see what changed
-5. **Audit Trail**: Track when each snapshot was created
+**How It Works:**
+```
+Oct 20: Run script → Version 1 with 1000 records (is_latest=1)
+Oct 21: Run script → Version 1 (is_latest=0), Version 2 with 1050 records (is_latest=1)
+Oct 22: Run script → V1&V2 (is_latest=0), Version 3 with 1080 records (is_latest=1)
+```
 
-**Files to Create:**
-1. `sql/03_curated_stage/curated_01_create_table.sql` - DDL for snapshot table
-2. `scripts/03_curated_stage/01_curated_table_creation.py` - Execute DDL
-3. `scripts/03_curated_stage/02_create_snapshot.py` - Daily snapshot ETL script
-4. `sql/03_curated_stage/curated_02_validation.sql` - Validation queries
-5. `scripts/03_curated_stage/03_run_validation.py` - Validation script
-6. `sql/03_curated_stage/curated_03_helper_queries.sql` - Common analysis queries
-7. `scripts/03_curated_stage/README.md` - Documentation and usage examples
+---
 
-**Estimated Time:** 2-3 hours
+## 🎯 CURRENT STAGE: STAGE 4 - DST (Next To Build)
 
-**Next Steps:**
-1. Create `/sql/03_curated_stage/` directory
-2. Create `/scripts/03_curated_stage/` directory
-3. Write DDL script and execute
-4. Build snapshot creation script
-5. Test with multiple snapshots (same day and different days)
-6. Add validation and helper queries
-7. Document usage
+**Purpose:** Create pre-aggregated tables optimized for fast reporting and analytics
 
 ---
 
@@ -505,16 +458,16 @@ ORDER BY potential_savings DESC;
 - [x] **Milestone 3:** Build STG layer with normalization and data quality (Week 2)
 
 ### Current Milestone 🎯
-- [ ] **Milestone 4:** Build CURATED layer with snapshot functionality (Week 3) ← **YOU ARE HERE**
-  - [ ] Design snapshot schema
-  - [ ] Create snapshot table
-  - [ ] Build snapshot ETL script
-  - [ ] Test multiple snapshots
-  - [ ] Add validation
-  - [ ] Document usage
+- [x] **Milestone 4:** Build CURATED layer with snapshot functionality (Week 3) ← **COMPLETED**
+  - [x] Design snapshot schema
+  - [x] Create snapshot table
+  - [x] Build snapshot ETL script
+  - [x] Test multiple snapshots
+  - [x] Add validation
+  - [x] Document usage
 
 ### Upcoming Milestones ❌
-- [ ] **Milestone 5:** Build DST layer with pre-aggregations (Week 3-4)
+- [ ] **Milestone 5:** Build DST layer with pre-aggregations (Week 3-4) ← **NEXT**
   - [ ] Design aggregation tables
   - [ ] Create monthly summary table
   - [ ] Create category trends table
@@ -563,18 +516,18 @@ ORDER BY potential_savings DESC;
 - [x] Test complete SRC → STG pipeline
 - [x] Write documentation (README, IMPLEMENTATION_SUMMARY)
 
-### 🎯 STAGE 3: CURATED - 0% COMPLETE (NEXT TASKS)
-- [ ] Design snapshot schema with versioning and is_latest flag
-- [ ] Create curated_spending_snapshots table with indexes
-- [ ] Build snapshot creation ETL script
-- [ ] Implement version increment logic (MAX + 1)
-- [ ] Implement is_latest flag management (set old to 0, new to 1)
-- [ ] Copy ALL historical data from STG for each snapshot
-- [ ] Create validation queries (version counts, is_latest checks, data accuracy)
-- [ ] Build validation script with reporting
-- [ ] Create helper queries (version comparison, time-travel queries)
-- [ ] Test multiple snapshot runs (verify version increment and is_latest updates)
-- [ ] Write documentation (README with examples of version management)
+### ✅ STAGE 3: CURATED - 100% COMPLETE
+- [x] Design snapshot schema with versioning and is_latest flag
+- [x] Create curated_spending_snapshots table with indexes (28 columns, 8 indexes)
+- [x] Build snapshot creation ETL script
+- [x] Implement version increment logic (MAX + 1)
+- [x] Implement is_latest flag management (set old to 0, new to 1)
+- [x] Copy ALL historical data from STG for each snapshot
+- [x] Create validation queries (version counts, is_latest checks, data accuracy)
+- [x] Build validation script with reporting (5 comprehensive checks)
+- [x] Create helper queries (22+ analysis queries for version comparison, time-travel)
+- [x] Test multiple snapshot runs (verify version increment and is_latest updates)
+- [x] Write documentation (README with examples and usage guide)
 
 ### ❌ STAGE 4: DST - 0% COMPLETE (FUTURE TASKS)
 - [ ] Design aggregation table schemas
@@ -607,54 +560,35 @@ ORDER BY potential_savings DESC;
 
 ---
 
-## 🎯 CURRENT FOCUS: Building CURATED Layer
+## 🎯 CURRENT FOCUS: Building DST Layer
 
 **What to build next:**
 
-1. **Create directories** (if not exists):
-   ```bash
-   mkdir -p sql/03_curated_stage
-   mkdir -p scripts/03_curated_stage
-   ```
+The DST (Dissemination Staging) layer creates pre-aggregated tables for fast reporting:
 
-2. **Create snapshot table** (30 mins):
-   - Write `sql/03_curated_stage/curated_01_create_table.sql`
-   - Write `scripts/03_curated_stage/01_curated_table_creation.py`
-   - Execute and verify table creation
+1. **Design aggregation schemas** (30 mins):
+   - Monthly spending summary table
+   - Category trends with MoM/YoY
+   - Person-level analytics
+   - Payment method summaries
 
-3. **Build snapshot ETL script** (1 hour):
-   - Write `scripts/03_curated_stage/02_create_snapshot.py`
-   - Implement snapshot creation logic:
-     - Get next version number: `SELECT COALESCE(MAX(snapshot_version), 0) + 1`
-     - Update all existing snapshots: `UPDATE ... SET is_latest = 0`
-     - Insert ALL data from `vw_stg_spending_enriched` with new version
-     - Set new snapshot with `is_latest = 1`
-     - Record snapshot_date (today's date) and created_at timestamp
+2. **Create aggregation tables** (1 hour):
+   - Write `sql/04_dst_stage/dst_01_create_tables.sql`
+   - Write `scripts/04_dst_stage/01_dst_tables_creation.py`
+   - Execute and verify
+
+3. **Build population scripts** (2-3 hours):
+   - Monthly summary ETL
+   - Category trends ETL
+   - Person analytics ETL
+   - Incremental update logic
 
 4. **Add validation** (30 mins):
-   - Write `sql/03_curated_stage/curated_02_validation.sql`
-   - Write `scripts/03_curated_stage/03_run_validation.py`
-   - Validate snapshot counts, data accuracy, version tracking
+   - Validation queries and scripts
+   - Verify aggregations match source data
 
-5. **Create helper queries** (30 mins):
-   - Write `sql/03_curated_stage/curated_03_helper_queries.sql`
-   - Common queries:
-     - Get latest snapshot: `WHERE is_latest = 1`
-     - Get specific version: `WHERE snapshot_version = N`
-     - Compare versions: version N vs version N+1 differences
-     - Count records per version: version growth tracking
-     - Time-travel query: view data as of specific date
-
-6. **Test thoroughly** (30 mins):
-   - Run snapshot creation multiple times
-   - Verify version incrementing (1 → 2 → 3)
-   - Verify is_latest flag management (only one version has is_latest=1)
-   - Verify ALL data copied from STG each time
-   - Compare record counts between versions
-
-7. **Document** (30 mins):
-   - Write `scripts/03_curated_stage/README.md`
-   - Include usage examples, troubleshooting, FAQs
+5. **Document** (30 mins):
+   - Usage guide and query examples
 
 ---
 
@@ -672,10 +606,10 @@ ORDER BY potential_savings DESC;
 ### Context-Aware Assistance
 When helping with this project, always:
 
-1. **Check Current Stage**: The project is at **Stage 3 (CURATED) - 0% complete**
-   - Stages 1 (SRC) and 2 (STG) are fully complete ✅
-   - Stage 3 is the current focus 🎯
-   - Stages 4 (DST) and 5 (DIS) are planned but not started ❌
+1. **Check Current Stage**: The project is at **Stage 4 (DST) - 0% complete**
+   - Stages 1 (SRC), 2 (STG), and 3 (CURATED) are fully complete ✅
+   - Stage 4 (DST) is the current focus 🎯
+   - Stage 5 (DIS) is planned but not started ❌
 
 2. **Understand the Architecture**: This is a 5-stage data warehouse:
    ```
@@ -713,13 +647,14 @@ When helping with this project, always:
 - Idempotent loading (ON CONFLICT)
 - Comprehensive validation
 
-**🎯 CURATED Layer** (scripts/03_curated_stage/) ← **NEXT TO BUILD**:
-- Versioned snapshots of ALL historical data
-- Each version captures complete data state at that point in time
-- `is_latest` flag to identify current version
-- Enables time-travel queries (view data as it was on any past date)
+**✅ CURATED Layer** (scripts/03_curated_stage/) - COMPLETE:
+- Versioned snapshots of ALL historical data (28 columns, 8 indexes)
+- Version management with `is_latest` flag
+- Time-travel queries (view data as it was on any past date)
+- 22+ helper queries for analysis
+- Comprehensive validation (5 checks)
 
-**❌ DST Layer** (scripts/04_dst_stage/) - Future:
+**❌ DST Layer** (scripts/04_dst_stage/) - Future ← **NEXT TO BUILD**:
 - Pre-aggregated monthly summaries
 - Category trends with MoM/YoY
 - Person-level analytics
@@ -729,17 +664,18 @@ When helping with this project, always:
 - Spending pattern insights
 - Budget alerts and warnings
 
-### Quick Start for Stage 3 (Current Work)
+### Quick Start for Stage 4 (Current Work)
 
-If asked to help with Stage 3 CURATED, the immediate tasks are:
+If asked to help with Stage 4 DST, the immediate tasks are:
 
-1. Create directories: `sql/03_curated_stage/` and `scripts/03_curated_stage/`
-2. Write `curated_01_create_table.sql` with snapshot schema
-3. Write `01_curated_table_creation.py` to execute DDL
-4. Write `02_create_snapshot.py` for daily snapshot creation
-5. Write validation queries and scripts
-6. Write helper queries for analysis
-7. Document everything in README.md
+1. Create directories: `sql/04_dst_stage/` and `scripts/04_dst_stage/`
+2. Design aggregation table schemas (monthly summaries, trends, analytics)
+3. Write `dst_01_create_tables.sql` with DDL
+4. Write `01_dst_tables_creation.py` to execute DDL
+5. Write ETL scripts to populate aggregation tables from CURATED
+6. Implement incremental update logic
+7. Write validation queries and scripts
+8. Document everything in README.md
 
 ### Database Connection Info
 - Database: Supabase (PostgreSQL)
@@ -757,33 +693,34 @@ If asked to help with Stage 3 CURATED, the immediate tasks are:
 - `stg_fact_spending` - Fact table
 - `vw_stg_spending_enriched` - Denormalized view (source for CURATED snapshots)
 
-**Curated Layer (to be built):**
-- `curated_spending_snapshots` - Daily snapshots with versioning
+**Curated Layer:**
+- `curated_spending_snapshots` - Versioned snapshots with is_latest flag (28 columns)
 
 ---
 
 ## 📊 PROJECT SUMMARY
 
-**Status**: 40% Complete (2 of 5 stages finished)
+**Status**: 60% Complete (3 of 5 stages finished)
 
 **Completed**: 
 - ✅ Stage 1 (SRC): Raw data loading
 - ✅ Stage 2 (STG): Normalized star schema with data quality
+- ✅ Stage 3 (CURATED): Versioned snapshots with time-travel
 
 **Current Focus**: 
-- 🎯 Stage 3 (CURATED): Building daily snapshot functionality
+- 🎯 Stage 4 (DST): Building pre-aggregated tables
 
 **Remaining Work**: 
-- ❌ Stage 4 (DST): Pre-aggregated analytics tables
+- ❌ Stage 4 (DST): Pre-aggregated analytics tables (IN PROGRESS)
 - ❌ Stage 5 (DIS): Financial insights and recommendations
 
-**Time to Completion**: 7-10 hours of focused development
+**Time to Completion**: 5-7 hours of focused development
 
 **Final Goal**: Deliver actionable financial insights answering "What lifestyle choices can improve my financial burden?"
 
 ---
 
 **Last Updated**: October 21, 2025
-**Current Stage**: CURATED (Stage 3) - 0% complete
-**Next Milestone**: Complete CURATED layer with snapshot functionality
+**Current Stage**: DST (Stage 4) - 0% complete
+**Next Milestone**: Complete DST layer with pre-aggregated tables
 
