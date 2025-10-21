@@ -40,9 +40,9 @@ STAGE 2: STG (Staging/Normalized Layer) ✅ COMPLETE
   ↓
 
 STAGE 3: CURATED (Snapshot Layer) 🎯 IN PROGRESS
-  Purpose: Daily snapshots for historical trend analysis
+  Purpose: Versioned snapshots of ALL historical data for time-travel analysis
   Tables: curated_spending_snapshots
-  Features: Version tracking, same-day replacement, point-in-time queries
+  Features: Full data snapshots per version, is_latest flag, point-in-time queries
   ↓
 
 STAGE 4: DST (Dissemination Staging/Aggregation) ❌ NOT STARTED
@@ -120,7 +120,7 @@ STAGE 5: DIS (Dissemination Views/Insights) ❌ NOT STARTED
 │   │   ├── 03_data_quality_report.py
 │   │   ├── README.md
 │   │   └── IMPLEMENTATION_SUMMARY.md
-│   ├── /03_curated_stage/         # 🎯 IN PROGRESS - Snapshot layer
+│   ├── /03_curated_stage/         # 🎯 IN PROGRESS - Versioned snapshots
 │   │   └── [To be created]
 │   ├── /04_dst_stage/             # ❌ NOT STARTED - Aggregation layer
 │   │   └── [Future work]
@@ -282,7 +282,38 @@ vw_stg_spending_enriched (joins all dimensions for easy analysis)
 
 ## 🎯 CURRENT STAGE: STAGE 3 - CURATED (In Progress)
 
-**Purpose:** Create daily snapshots of spending data for historical trend analysis
+**Purpose:** Create versioned snapshots of ALL historical spending data for point-in-time analysis
+
+**How CURATED Works:**
+- Each snapshot captures **ALL historical data** up to the snapshot date
+- Running on 2025-10-20 → Creates Version 1 with ALL data up to Oct 20
+- Running on 2025-10-21 → Creates Version 2 with ALL data up to Oct 21 (including new Oct 21 data)
+- Running on 2025-10-22 → Creates Version 3 with ALL data up to Oct 22
+- **Latest version** gets `is_latest = 1`, all previous versions get `is_latest = 0`
+- Enables time-travel queries: "What did my spending look like on Oct 20?"
+
+**Example Scenario:**
+```
+Oct 20, 2025: Run script
+  → Version 1 created with 1000 records (all historical data)
+  → is_latest = 1
+
+Oct 21, 2025: Run script (50 new transactions added to STG)
+  → Version 1: is_latest changed to 0
+  → Version 2 created with 1050 records (all 1000 + 50 new)
+  → is_latest = 1
+
+Oct 22, 2025: Run script (30 new transactions added to STG)
+  → Version 1: is_latest = 0
+  → Version 2: is_latest changed to 0
+  → Version 3 created with 1080 records (all 1050 + 30 new)
+  → is_latest = 1
+
+Query Examples:
+- Get latest data: SELECT * WHERE is_latest = 1
+- Get Oct 20 snapshot: SELECT * WHERE snapshot_version = 1
+- Compare versions: SELECT COUNT(*) FROM ... GROUP BY snapshot_version
+```
 
 **Target Deliverables:**
 - [ ] 1 Snapshot table: `curated_spending_snapshots`
@@ -295,16 +326,17 @@ vw_stg_spending_enriched (joins all dimensions for easy analysis)
 ```sql
 CREATE TABLE curated_spending_snapshots (
   snapshot_id BIGSERIAL PRIMARY KEY,
-  snapshot_date DATE NOT NULL,
-  snapshot_version INTEGER NOT NULL,
+  snapshot_date DATE NOT NULL,        -- Date when snapshot was created
+  snapshot_version INTEGER NOT NULL,  -- Incremental version number (1, 2, 3, ...)
+  is_latest SMALLINT DEFAULT 0,       -- 1 if this is the latest version, 0 otherwise
   
-  -- All spending data from STG layer
+  -- All spending data from STG layer (denormalized for easy querying)
   spending_id BIGINT NOT NULL,
-  date DATE NOT NULL,
+  transaction_date DATE NOT NULL,     -- Original transaction date
   amount_usd NUMERIC(12,2) NOT NULL,
   description TEXT,
   
-  -- Denormalized dimensions (for easy querying)
+  -- Denormalized dimensions (from STG enriched view)
   person_name VARCHAR(255),
   category_name VARCHAR(100),
   location_name VARCHAR(255),
@@ -314,17 +346,29 @@ CREATE TABLE curated_spending_snapshots (
   data_quality_score INTEGER,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   
-  -- Composite unique constraint (same-day snapshots increment version)
-  UNIQUE (snapshot_date, snapshot_version, spending_id)
+  -- Composite unique constraint (each version contains all spending records)
+  UNIQUE (snapshot_version, spending_id)
 );
+
+-- Index for fast latest version queries
+CREATE INDEX idx_curated_snapshots_latest ON curated_spending_snapshots(is_latest) WHERE is_latest = 1;
+
+-- Index for version-based queries
+CREATE INDEX idx_curated_snapshots_version ON curated_spending_snapshots(snapshot_version);
+
+-- Index for date range queries
+CREATE INDEX idx_curated_snapshots_date ON curated_spending_snapshots(snapshot_date);
 ```
 
 **Key Features to Implement:**
-- Daily snapshot creation from `vw_stg_spending_enriched`
-- Same-day replacement logic (delete + reinsert for same date)
-- Version tracking (v1, v2, v3 for multiple same-day snapshots)
-- Point-in-time queries (query data as it existed on specific dates)
-- Historical trend analysis support
+1. **Full Historical Snapshot**: Copy ALL data from `vw_stg_spending_enriched` on each run
+2. **Version Management**: 
+   - Auto-increment version number (get MAX(snapshot_version) + 1)
+   - Set new snapshot `is_latest = 1`
+   - Update all previous snapshots `is_latest = 0`
+3. **Point-in-Time Queries**: Query specific versions to see historical state
+4. **Data Comparison**: Compare different versions to see what changed
+5. **Audit Trail**: Track when each snapshot was created
 
 **Files to Create:**
 1. `sql/03_curated_stage/curated_01_create_table.sql` - DDL for snapshot table
@@ -520,16 +564,17 @@ ORDER BY potential_savings DESC;
 - [x] Write documentation (README, IMPLEMENTATION_SUMMARY)
 
 ### 🎯 STAGE 3: CURATED - 0% COMPLETE (NEXT TASKS)
-- [ ] Design snapshot schema with versioning
-- [ ] Create curated_spending_snapshots table
+- [ ] Design snapshot schema with versioning and is_latest flag
+- [ ] Create curated_spending_snapshots table with indexes
 - [ ] Build snapshot creation ETL script
-- [ ] Implement same-day replacement logic
-- [ ] Add version tracking
-- [ ] Create validation queries (snapshot counts, data accuracy)
+- [ ] Implement version increment logic (MAX + 1)
+- [ ] Implement is_latest flag management (set old to 0, new to 1)
+- [ ] Copy ALL historical data from STG for each snapshot
+- [ ] Create validation queries (version counts, is_latest checks, data accuracy)
 - [ ] Build validation script with reporting
-- [ ] Create helper queries (trend analysis, point-in-time queries)
-- [ ] Test multiple snapshots (same day and different days)
-- [ ] Write documentation (README with usage examples)
+- [ ] Create helper queries (version comparison, time-travel queries)
+- [ ] Test multiple snapshot runs (verify version increment and is_latest updates)
+- [ ] Write documentation (README with examples of version management)
 
 ### ❌ STAGE 4: DST - 0% COMPLETE (FUTURE TASKS)
 - [ ] Design aggregation table schemas
@@ -580,10 +625,11 @@ ORDER BY potential_savings DESC;
 3. **Build snapshot ETL script** (1 hour):
    - Write `scripts/03_curated_stage/02_create_snapshot.py`
    - Implement snapshot creation logic:
-     - Check for existing snapshots on same date
-     - Increment version number if needed
-     - Copy all data from `vw_stg_spending_enriched`
-     - Add snapshot metadata (date, version, created_at)
+     - Get next version number: `SELECT COALESCE(MAX(snapshot_version), 0) + 1`
+     - Update all existing snapshots: `UPDATE ... SET is_latest = 0`
+     - Insert ALL data from `vw_stg_spending_enriched` with new version
+     - Set new snapshot with `is_latest = 1`
+     - Record snapshot_date (today's date) and created_at timestamp
 
 4. **Add validation** (30 mins):
    - Write `sql/03_curated_stage/curated_02_validation.sql`
@@ -592,12 +638,19 @@ ORDER BY potential_savings DESC;
 
 5. **Create helper queries** (30 mins):
    - Write `sql/03_curated_stage/curated_03_helper_queries.sql`
-   - Common queries: latest snapshot, snapshot comparison, trend analysis
+   - Common queries:
+     - Get latest snapshot: `WHERE is_latest = 1`
+     - Get specific version: `WHERE snapshot_version = N`
+     - Compare versions: version N vs version N+1 differences
+     - Count records per version: version growth tracking
+     - Time-travel query: view data as of specific date
 
 6. **Test thoroughly** (30 mins):
    - Run snapshot creation multiple times
-   - Test same-day replacement (version incrementing)
-   - Verify data accuracy against STG layer
+   - Verify version incrementing (1 → 2 → 3)
+   - Verify is_latest flag management (only one version has is_latest=1)
+   - Verify ALL data copied from STG each time
+   - Compare record counts between versions
 
 7. **Document** (30 mins):
    - Write `scripts/03_curated_stage/README.md`
@@ -661,9 +714,10 @@ When helping with this project, always:
 - Comprehensive validation
 
 **🎯 CURATED Layer** (scripts/03_curated_stage/) ← **NEXT TO BUILD**:
-- Daily spending snapshots
-- Version tracking for same-day updates
-- Historical trend analysis support
+- Versioned snapshots of ALL historical data
+- Each version captures complete data state at that point in time
+- `is_latest` flag to identify current version
+- Enables time-travel queries (view data as it was on any past date)
 
 **❌ DST Layer** (scripts/04_dst_stage/) - Future:
 - Pre-aggregated monthly summaries
